@@ -149,6 +149,15 @@ async def remove_from_aquarium(self: "FishingPlugin", event: AstrMessageEvent):
     else:
         yield event.plain_result(f"❌ {result['message']}")
 
+async  def remove_all_from_aquarium(self: "FishingPlugin", event: AstrMessageEvent):
+    """将所有鱼从水族箱移回鱼塘"""
+    user_id = self._get_effective_user_id(event)
+    result = self.aquarium_service.remove_all_fish_from_aquarium(user_id)
+    
+    if result["success"]:
+        yield event.plain_result(f"✅ {result['message']}")
+    else:
+        yield event.plain_result(f"❌ {result['message']}")
 
 async def upgrade_aquarium(self: "FishingPlugin", event: AstrMessageEvent):
     """升级水族箱容量"""
@@ -178,6 +187,7 @@ async def aquarium_help(self: "FishingPlugin", event: AstrMessageEvent):
 • /水族箱 - 查看水族箱中的鱼
 • /放入水族箱 <鱼ID> [数量] - 将鱼从鱼塘放入水族箱
 • /移出水族箱 <鱼ID> [数量] - 将鱼从水族箱移回鱼塘
+• /全部移出水族箱 - 将所有鱼从水族箱移回鱼塘
 • /升级水族箱 - 升级水族箱容量
 • /水族箱 帮助 - 显示此帮助信息
 

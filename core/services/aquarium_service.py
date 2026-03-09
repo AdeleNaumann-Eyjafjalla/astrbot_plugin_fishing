@@ -121,6 +121,28 @@ class AquariumService:
             "message": f"成功将 {quality_label}{fish_template.name} x{quantity} 从水族箱移回鱼塘！"
         }
 
+    def remove_all_fish_from_aquarium(self, user_id: str) -> Dict[str, Any]:
+        """将所有鱼从水族箱移回鱼塘"""
+        # 检查用户是否存在
+        user = self.user_repo.get_by_id(user_id)
+        if not user:
+            return {"success": False, "message": "用户不存在"}
+
+        # 获取水族箱中的所有鱼
+        aquarium_items = self.inventory_repo.get_aquarium_inventory(user_id)
+        if not aquarium_items:
+            return {"success": False, "message": "水族箱中没有鱼"}
+
+        # 将每种鱼移回鱼塘
+        for item in aquarium_items:
+            self.inventory_repo.remove_fish_from_aquarium(user_id, item.fish_id, item.quantity, item.quality_level)
+            self.inventory_repo.add_fish_to_inventory(user_id, item.fish_id, item.quantity, item.quality_level)
+
+        return {
+            "success": True,
+            "message": f"成功将水族箱中的所有鱼移回鱼塘！共移回 {len(aquarium_items)} 种鱼，数量：{sum(item.quantity for item in aquarium_items)} 条"
+        }
+
     def get_aquarium_upgrades(self) -> List[AquariumUpgrade]:
         """获取所有水族箱升级配置"""
         return self.inventory_repo.get_aquarium_upgrades()

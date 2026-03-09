@@ -574,6 +574,12 @@ class FishingPlugin(Star):
         async for r in aquarium_handlers.remove_from_aquarium(self, event):
             yield r
 
+    @filter.command("全部移出水族箱", alias={"全部移回鱼塘"})
+    async def remove_all_from_aquarium(self, event: AstrMessageEvent):
+        """将所有鱼从水族箱移回鱼塘。用法：全部移出水族箱"""
+        async for r in aquarium_handlers.remove_all_from_aquarium(self, event):
+            yield r
+    
     @filter.command("升级水族箱", alias={"水族箱升级"})
     async def upgrade_aquarium(self, event: AstrMessageEvent):
         """升级水族箱容量，可以展示更多珍贵鱼类"""
