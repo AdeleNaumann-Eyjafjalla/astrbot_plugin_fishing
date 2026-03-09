@@ -5,7 +5,7 @@
 # 🎣 AstrBot 钓鱼插件
 
 ## ⚠️ 通知
-目前由于本职工作繁忙，没有继续用Astrbot框架，暂停维护和更新本插件。
+本插件因原作者[0xNMLSS](https://github.com/0xNMLSS/astrbot_plugin_fishing)暂停更新维护，因此。
 
 ## 🚀 最新更新 🚀
 
