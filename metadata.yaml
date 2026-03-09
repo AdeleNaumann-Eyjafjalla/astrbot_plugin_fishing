@@ -2,5 +2,5 @@
 display_name: Fishing Forever!
 version: 2.4.8
 author: "AdeleNaumann-Eyjafjalla"
-description: "全新架构钓鱼插件！更多交互，多商店系统、交易所、品质系统、水族箱和Web管理（支持原版fishing存档继续游玩）"
+description: "钓鱼插件个人魔改版，基于FishingAnother!的v2.4.7版本进行更新维护。"
 repo: https://github.com/AdeleNaumann-Eyjafjalla/astrbot_plugin_fishing

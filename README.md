@@ -1,11 +1,6 @@
-![:astrbot_plugin_fish](https://count.getloli.com/@:astrbot_plugin_fish?theme=capoo-1)
-
 <div align="center">
 
 # 🎣 AstrBot 钓鱼插件
-
-## ⚠️ 通知
-本插件因原作者[0xNMLSS](https://github.com/0xNMLSS/astrbot_plugin_fishing)暂停更新维护，本分支将基于原作者v2.4.7的版本继续进行更新维护。
 
 ## 🚀 最新更新 🚀
 
