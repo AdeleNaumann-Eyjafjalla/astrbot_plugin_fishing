@@ -5,7 +5,7 @@
 # 🎣 AstrBot 钓鱼插件
 
 ## ⚠️ 通知
-本插件因原作者[0xNMLSS](https://github.com/0xNMLSS/astrbot_plugin_fishing)暂停更新维护，因此。
+本插件因原作者[0xNMLSS](https://github.com/0xNMLSS/astrbot_plugin_fishing)暂停更新维护，本分支将基于原作者v2.4.7的版本继续进行更新维护。
 
 ## 🚀 最新更新 🚀
 
@@ -107,6 +107,8 @@
 如果您有功能建议或发现问题，欢迎在 [Issues](https://github.com/xxlemon-io/astrbot_plugin_fishing/issues) 中提出！
  
 ## 📦 更新记录
+#### v2.4.8 (全新水族箱指令)
+- **🆕 全新水族箱指令**：新增`/全部移出水族箱`命令，一键将水族箱中的所有鱼移回鱼塘，操作更便捷
 
 #### v2.4.7 (插件元数据规范化 + 命令文本优化 + 高稀有度鱼竿出售价格修复)
 
