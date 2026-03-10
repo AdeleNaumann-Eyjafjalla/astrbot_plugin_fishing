@@ -11,7 +11,7 @@ from ..domain.models import (
     FishingRecord, GachaRecord, WipeBombLog, MarketListing, TaxRecord,
     GachaPool, GachaPoolItem, FishingZone, UserBuff, AquariumUpgrade,
     ShopOffer, ShopOfferCost, ShopOfferReward,
-    Commodity, Exchange, UserCommodity  # 新增交易所模型导入
+    Commodity, Exchange, UserCommodity, BankAccount
 )
 
 # 定义用户成就进度的数据结构
@@ -728,4 +728,26 @@ class AbstractShopRepository(ABC):
     @abstractmethod
     def get_offer_by_id(self, offer_id: int) -> Optional[Dict[str, Any]]:
         """根据ID获取商品（兼容旧接口）"""
+        pass
+    
+class AbstractBankRepository(ABC):
+    """银行数据仓储接口"""
+    @abstractmethod
+    def get_by_id(self, user_id: str) -> Optional[BankAccount]:
+        """根据用户ID获取银行账户"""
+        pass
+
+    @abstractmethod
+    def create_or_update(self, account: BankAccount) -> None:
+        """创建或更新银行账户"""
+        pass
+
+    @abstractmethod
+    def get_all_accounts(self) -> List[BankAccount]:
+        """获取所有银行账户"""
+        pass
+
+    @abstractmethod
+    def get_blacklist(self) -> List[str]:
+        """获取黑名单用户列表"""
         pass

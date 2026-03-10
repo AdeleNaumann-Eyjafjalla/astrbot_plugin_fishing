@@ -248,6 +248,19 @@ def draw_help_image():
         ("代理下线", "恢复为管理员身份"),
         ("同步初始设定", "危！从初始数据文件\n同步数据"),
     ]
+    
+    bank = [
+        ("存钱 [金额]", "将金币存入银行"),
+        ("取钱 [金额]", "从银行取出金币"),
+        ("贷款 [金额]", "向银行申请贷款"),
+        ("还款", "全额偿还银行贷款"),
+        ("查询存款", "查询银行余额"),
+        ("查询存款利率", "查询存款利率"),
+        ("查询贷款", "查询贷款信息"),
+        ("查询贷款利率", "查询贷款利率"),
+        ("查询失信名单", "查询银行失信名单"),
+        ("银行 帮助", "查看银行系统\n帮助信息"),
+    ]
 
     # 10. 先计算自适应高度
     def section_delta(item_count: int, cols: int) -> int:
@@ -261,6 +274,7 @@ def draw_help_image():
     y0_est = logo_y + logo_size + 30
     y0_est += section_delta(len(basic), 3)
     y0_est += section_delta(len(inventory), 3)
+    y0_est += section_delta(len(bank), 3)
     y0_est += section_delta(len(market), 3)
     y0_est += section_delta(len(gacha), 3)
     y0_est += section_delta(len(sicbo), 3)
@@ -304,6 +318,7 @@ def draw_help_image():
     y0 = logo_y + logo_size + 30
     y0 = draw_section("🎣 基础与核心玩法", basic, y0, cols=3)
     y0 = draw_section("🎒 背包与资产管理", inventory, y0, cols=3)
+    y0 = draw_section("🏦 银行系统", bank, y0, cols=3)  # 添加银行部分
     y0 = draw_section("🛒 商店与市场", market, y0, cols=3)
     y0 = draw_section("🎰 抽卡与概率玩法", gacha, y0, cols=3)
     y0 = draw_section("🎲 骰宝游戏", sicbo, y0, cols=3)

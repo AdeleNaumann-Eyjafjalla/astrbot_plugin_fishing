@@ -20,6 +20,7 @@ from .core.repositories.sqlite_achievement_repo import SqliteAchievementReposito
 from .core.repositories.sqlite_user_buff_repo import SqliteUserBuffRepository
 from .core.repositories.sqlite_exchange_repo import SqliteExchangeRepository # 新增交易所Repo
 from .core.repositories.sqlite_red_packet_repo import SqliteRedPacketRepository # 新增红包Repo
+from .core.repositories.sqlite_bank_repo import SqliteBankRepository
 
 from .core.services.data_setup_service import DataSetupService
 from .core.services.item_template_service import ItemTemplateService
@@ -36,6 +37,7 @@ from .core.services.fishing_zone_service import FishingZoneService
 from .core.services.exchange_service import ExchangeService # 新增交易所Service
 from .core.services.sicbo_service import SicboService # 新增骰宝Service
 from .core.services.red_packet_service import RedPacketService # 新增红包Service
+from .core.services.bank_service import BankService
 
 from .core.database.migration import run_migrations
 
@@ -53,6 +55,7 @@ from .handlers import (
     aquarium_handlers, 
     sicbo_handlers,
     red_packet_handlers,
+    bank_handlers,
 )
 from .handlers.fishing_handlers import FishingHandlers
 from .handlers.exchange_handlers import ExchangeHandlers
@@ -219,6 +222,7 @@ class FishingPlugin(Star):
         self.achievement_repo = SqliteAchievementRepository(db_path)
         self.buff_repo = SqliteUserBuffRepository(db_path)
         self.exchange_repo = SqliteExchangeRepository(db_path)
+        self.bank_repo = SqliteBankRepository(db_path)
 
         # --- 3. 组合根：实例化所有服务层，并注入依赖 ---
         # 3.1 核心服务必须在效果管理器之前实例化，以解决依赖问题
@@ -261,6 +265,14 @@ class FishingPlugin(Star):
             self.inventory_repo,
             self.user_repo,
             self.item_template_repo
+        )
+        
+        # 初始化银行服务
+        self.bank_service = BankService(
+            user_repo=self.user_repo,
+            bank_repo=self.bank_repo,
+            item_template_repo=self.item_template_repo,
+            config=self.game_config
         )
         
         # 初始化交易所服务
@@ -1104,6 +1116,68 @@ class FishingPlugin(Star):
         async for r in self.exchange_handlers.clear_inventory(event):
             yield r
 
+    # =========== 银行服务 ==========
+    
+    @filter.command("存钱")
+    async def deposit(self, event: AstrMessageEvent):
+        """存钱到银行"""
+        async for r in bank_handlers.bank_deposit(self, event):
+            yield r
+
+    @filter.command("取钱")
+    async def withdraw(self, event: AstrMessageEvent):
+        """从银行取钱"""
+        async for r in bank_handlers.bank_withdraw(self, event):
+            yield r
+
+    @filter.command("贷款")
+    async def loan(self, event: AstrMessageEvent):
+        """向银行贷款"""
+        async for r in bank_handlers.bank_loan(self, event):
+            yield r
+
+    @filter.command("还款")
+    async def repay(self, event: AstrMessageEvent):
+        """还款"""
+        async for r in bank_handlers.bank_repay(self, event):
+            yield r
+
+    @filter.command("查询存款")
+    async def query_balance(self, event: AstrMessageEvent):
+        """查询银行余额"""
+        async for r in bank_handlers.bank_query_balance(self, event):
+            yield r
+
+    @filter.command("查询存款利率")
+    async def query_deposit_rate(self, event: AstrMessageEvent):
+        """查询存款利率"""
+        async for r in bank_handlers.bank_query_deposit_rate(self, event):
+            yield r
+
+    @filter.command("查询贷款")
+    async def query_loan(self, event: AstrMessageEvent):
+        """查询贷款信息"""
+        async for r in bank_handlers.bank_query_loan(self, event):
+            yield r
+
+    @filter.command("查询贷款利率")
+    async def query_loan_rate(self, event: AstrMessageEvent):
+        """查询贷款利率"""
+        async for r in bank_handlers.bank_query_loan_rate(self, event):
+            yield r
+
+    @filter.command("查询失信名单")
+    async def query_blacklist(self, event: AstrMessageEvent):
+        """查询失信名单"""
+        async for r in bank_handlers.bank_query_blacklist(self, event):
+            yield r
+
+    @filter.command("银行", alias={"银行帮助"})
+    async def bank_help(self, event: AstrMessageEvent):
+        """银行帮助"""
+        async for r in bank_handlers.bank_help(self, event):
+            yield r
+    
     # =========== 管理后台 ==========
 
     @filter.permission_type(PermissionType.ADMIN)

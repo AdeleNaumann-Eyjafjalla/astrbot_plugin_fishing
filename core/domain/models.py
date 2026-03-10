@@ -569,3 +569,13 @@ class RedPacketRecord:
     user_id: str
     amount: int
     claimed_at: datetime = None
+
+@dataclass
+class BankAccount:
+    user_id: str = ""
+    balance: int = 0
+    loan_amount: int = 0
+    loan_start_date: Optional[datetime] = None
+    total_repaid: int = 0
+    last_deposit_date: Optional[datetime] = None
+    blacklisted: bool = False
