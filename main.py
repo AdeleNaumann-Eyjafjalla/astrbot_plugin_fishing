@@ -298,7 +298,7 @@ class FishingPlugin(Star):
         # 3.2 实例化效果管理器并自动注册所有效果（需要在fishing_service之后）
         self.effect_manager = EffectManager()
         self.effect_manager.discover_and_register(
-            effects_package_path="data.plugins.astrbot_plugin_fishing.core.services.item_effects",
+            effects_package_path="data.plugins.plugin_upload_astrbot_plugin_fishing.core.services.item_effects",
             dependencies={
                 "user_repo": self.user_repo, 
                 "buff_repo": self.buff_repo,
@@ -320,6 +320,9 @@ class FishingPlugin(Star):
             self.fishing_service.start_daily_tax_task()  # 启动独立的税收线程
         self.achievement_service.start_achievement_check_task()
         self.exchange_service.start_daily_price_update_task() # 启动交易所后台任务
+        
+        # 添加银行利息计算任务
+        self.bank_service.start_daily_interest_task()
         
         # 启动红包清理任务
         self._red_packet_cleanup_task = asyncio.create_task(self._red_packet_cleanup_scheduler())
@@ -1367,7 +1370,7 @@ class FishingPlugin(Star):
         self.fishing_service.stop_daily_tax_task()  # 终止独立的税收线程
         self.achievement_service.stop_achievement_check_task()
         self.exchange_service.stop_daily_price_update_task() # 终止交易所后台任务
-        
+        self.bank_service.stop_daily_interest_task() 
         # 取消红包清理任务
         if hasattr(self, '_red_packet_cleanup_task') and self._red_packet_cleanup_task:
             self._red_packet_cleanup_task.cancel()

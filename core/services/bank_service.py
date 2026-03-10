@@ -1,5 +1,6 @@
-import json
-from datetime import datetime, timedelta
+import threading
+from astrbot.api import logger
+from datetime import datetime, timedelta,time
 from typing import Dict, Any, Optional
 from ..repositories.abstract_repository import (
     AbstractUserRepository,
@@ -32,18 +33,20 @@ class BankService:
         if user.coins < amount:
             return {"success": False, "message": f"金币不足，当前持有 {user.coins} 金币"}
 
-        # 更新用户金币和银行存款
-        user.coins -= amount
-        
-        # 获取或创建银行账户
+        # Check if user is blacklisted
         bank_account = self.bank_repo.get_by_id(user_id)
+        if bank_account and bank_account.blacklisted:
+            return {"success": False, "message": "您已被列入失信名单，无法进行存款操作，请先还清贷款"}
+
+        # Get or create bank account
         if not bank_account:
             bank_account = self._create_new_account(user_id)
         
         bank_account.balance += amount
         bank_account.last_deposit_date = datetime.now()
         
-        # 保存更改
+        # Update user coins and save changes
+        user.coins -= amount
         self.user_repo.update(user)
         self.bank_repo.create_or_update(bank_account)
 
@@ -64,18 +67,16 @@ class BankService:
 
         bank_account = self.bank_repo.get_by_id(user_id)
         if not bank_account:
-            return {"success": False, "message": "您还没有银行账户"}
+            return {"success": False, "message": "您还没有银行账户，存钱后自动开户"}
+
+        # Check if user is blacklisted
+        if bank_account.blacklisted:
+            return {"success": False, "message": "您已被列入失信名单，无法进行取款操作，请先还清贷款"}
 
         if bank_account.balance < amount:
             return {"success": False, "message": f"银行余额不足，当前余额 {bank_account.balance} 金币"}
 
-        # 检查是否有贷款（不能有未还贷款时取款）
-        if bank_account.loan_amount > 0:
-            loan_days = (datetime.now() - bank_account.loan_start_date).days if bank_account.loan_start_date else 0
-            if loan_days < 3:  # 贷款后3天内不能取款
-                return {"success": False, "message": f"贷款后3天内无法取款，还需等待 {3 - loan_days} 天"}
-
-        # 更新银行账户和用户金币
+        # Update bank account and user coins
         bank_account.balance -= amount
         user.coins += amount
 
@@ -87,7 +88,7 @@ class BankService:
             "message": f"成功从银行取出 {amount} 金币",
             "new_balance": bank_account.balance
         }
-
+        
     def loan(self, user_id: str, amount: int) -> Dict[str, Any]:
         """向银行贷款"""
         if amount <= 0:
@@ -105,8 +106,8 @@ class BankService:
         if bank_account.loan_amount > 0:
             return {"success": False, "message": "您已有未还贷款，请先还清后再申请新贷款"}
 
-        # 计算最大贷款额度（历史最高持有金币的10%）
-        max_loan = int(user.highest_coins_held * 0.1)
+        # 计算最大贷款额度（历史最高持有金币的50%）
+        max_loan = int(user.max_coins * 0.5)
         if amount > max_loan:
             return {"success": False, "message": f"超出贷款额度，最大可贷 {max_loan} 金币"}
 
@@ -122,7 +123,7 @@ class BankService:
 
         return {
             "success": True,
-            "message": f"成功贷款 {amount} 金币，贷款将在3天后开始计息",
+            "message": f"成功贷款 {amount} 金币，贷款立即开始计息，3天后可还款",
             "loan_amount": amount
         }
 
@@ -155,6 +156,9 @@ class BankService:
         bank_account.total_repaid = total_due
         bank_account.loan_amount = 0
         bank_account.loan_start_date = None
+        
+        # Remove user from blacklist after successful repayment
+        bank_account.blacklisted = False
 
         self.user_repo.update(user)
         self.bank_repo.create_or_update(bank_account)
@@ -178,17 +182,6 @@ class BankService:
             "success": True,
             "balance": bank_account.balance,
             "last_deposit_date": bank_account.last_deposit_date.isoformat() if bank_account.last_deposit_date else None
-        }
-
-    def query_deposit_interest_rate(self) -> Dict[str, Any]:
-        """查询存款利率"""
-        # 存款利率为2%~3%波动
-        import random
-        rate = round(random.uniform(0.02, 0.03), 4)
-        return {
-            "success": True,
-            "rate": rate,
-            "rate_percent": f"{rate * 100:.2f}%"
         }
 
     def query_loan_info(self, user_id: str) -> Dict[str, Any]:
@@ -242,44 +235,68 @@ class BankService:
             
             # 处理存款利息
             if account.balance > 0 and account.last_deposit_date:
-                days_deposited = (datetime.now() - account.last_deposit_date).days
-                if days_deposited >= 1:  # 存入次日开始计息
-                    deposit_rate = self.query_deposit_interest_rate()["rate"]
-                    interest = int(account.balance * deposit_rate)
-                    account.balance += interest
+                deposit_rate = self.query_deposit_interest_rate()["rate"]
+                interest = int(account.balance * deposit_rate)
+                account.balance += interest
                     
-                    # 更新账户余额
+                # 更新账户余额
+                self.bank_repo.create_or_update(account)
+
+            # 处理贷款利息 - 贷款从第一天就开始计息，但3天内不能还款
+            if account.loan_amount > 0 and account.loan_start_date:
+                # 贷款从第一天开始计息
+                loan_rate = self.query_loan_interest_rate()["rate"]
+                interest = int(account.loan_amount * loan_rate)
+                
+                # 检查是否超过本金100%
+                total_with_interest = account.loan_amount + interest
+                if total_with_interest > account.loan_amount * 2:  # 超过本金100%
+                    # 停止计息，尝试扣除
+                    self._attempt_deduction_for_overdue_loan(account, user)
+                else:
+                    # 更新贷款总额
+                    account.loan_amount += interest
                     self.bank_repo.create_or_update(account)
 
-            # 处理贷款利息
-            if account.loan_amount > 0 and account.loan_start_date:
-                days_since_loan = (datetime.now() - account.loan_start_date).days
-                if days_since_loan >= 3:  # 贷款后第4天开始计息
-                    loan_rate = self.query_loan_interest_rate()["rate"]
-                    interest = int(account.loan_amount * loan_rate)
-                    
-                    # 检查是否超过本金100%
-                    total_with_interest = account.loan_amount + interest
-                    if total_with_interest > account.loan_amount * 2:  # 超过本金100%
-                        # 停止计息，尝试扣除
-                        self._attempt_deduction_for_overdue_loan(account, user)
-                    else:
-                        # 更新贷款总额
-                        account.loan_amount += interest
-                        self.bank_repo.create_or_update(account)
+    def start_daily_interest_task(self):
+        """启动每日利息计算任务"""
+        def run_scheduler():
+            while True:
+                now = datetime.now()
+                # 计算到第二天0点的时间间隔
+                next_midnight = datetime.combine(now.date(), time.min) + timedelta(days=1)
+                seconds_until_midnight = (next_midnight - now).total_seconds()
+                
+                # 等待到午夜
+                time.sleep(seconds_until_midnight)
+                
+                # 执行每日利息计算
+                try:
+                    logger.info("开始处理每日利息计算...")
+                    self.process_daily_interest()
+                    logger.info("每日利息计算完成")
+                except Exception as e:
+                    logger.error(f"处理每日利息时出错: {e}")
 
+        # 在单独线程中启动调度程序
+        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        scheduler_thread.start()
+
+    def stop_daily_interest_task(self):
+        """停止每日利息计算任务（用于插件终止时）"""
+        # 如果使用了异步任务，需要取消任务
+        pass
+    
     def _calculate_total_due(self, account) -> int:
-        """计算应还总额"""
+        """计算应还总额 - 贷款从第一天开始计息"""
         if not account.loan_start_date:
             return account.loan_amount
-            
-        days_since_loan = (datetime.now() - account.loan_start_date).days
-        if days_since_loan < 3:
-            return account.loan_amount  # 3天内只还本金
 
-        # 计算利息
+        # 计算总利息（从贷款当天开始计算，直到现在）
+        days_since_loan = (datetime.now() - account.loan_start_date).days
         total_with_interest = account.loan_amount
-        for day in range(3, days_since_loan + 1):
+
+        for day in range(days_since_loan + 1):  # 从第0天开始计息
             loan_rate = self.query_loan_interest_rate()["rate"]
             total_with_interest = int(total_with_interest * (1 + loan_rate))
             
